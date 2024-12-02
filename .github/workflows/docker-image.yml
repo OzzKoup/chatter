@@ -39,7 +39,7 @@ jobs:
       - name: Run tests
         run: |
           echo "sdfsdsdf" "${{ secrets.AWS_ACCESS_KEY_ID }}"
-          echo "sdfsdsdf" "${{ secrets.AWS_ACCESS_KEY_ID }}" ${{ env.AWS_REGION }}
+          echo "sdfsdsdf" "${{ vars.test }}" ${{ env.AWS_REGION }}
         id: run_tests
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
