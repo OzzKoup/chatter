@@ -3,63 +3,71 @@ name: Deploy to Amazon ECS
 on:
   push:
     branches:
-      - main
+      - main  # Trigger the workflow when there is a push to the 'main' branch
 
 env:
-  AWS_REGION: eu-central-1                   # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: 084375578923.dkr.ecr.eu-central-1.amazonaws.com/chatter          # set this to your Amazon ECR repository name
-  ECS_SERVICE: chatter                        # set this to your Amazon ECS service name
-  ECS_CLUSTER: MY_ECS_CLUSTER                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .aws/task-definition.json # set this to the path to your Amazon ECS task definition
-  CONTAINER_NAME: chatter-container           # set this to the name of the container in the containerDefinitions section of your task definition
+  AWS_REGION: eu-central-1                    # The AWS region you're using
+  ECR_REPOSITORY: 084375578923.dkr.ecr.eu-central-1.amazonaws.com/chatter   # Your ECR repository URL
+  ECS_SERVICE: chatter                         # Your ECS service name
+  ECS_CLUSTER: MY_ECS_CLUSTER                  # Your ECS cluster name
+  ECS_TASK_DEFINITION: MY_ECS_TASK_DEFINITION  # ECS task definition file path (e.g., .aws/task-definition.json)
+  CONTAINER_NAME: chatter                      # The container name used in the ECS task definition
 
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to ECS
     runs-on: ubuntu-latest
     environment: production
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Set up Java with Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          java-version: '21'  # Specify the Java version you're using
+          gradle-version: '8.0'  # Specify the Gradle version you're using
+
+      - name: Clean and build Java project with Gradle
+        run: |
+          # Navigate to the directory containing your build.gradle if needed
+          cd chatter  # Use the correct path to the directory containing the build.gradle file
+          gradle clean build  # Clean and build your Gradle project
+
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Maven Package
-        run: gradle clean build
-
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build, tag, and push Docker image to ECR
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build the Docker image and tag it with 'latest' and commit SHA
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+          # Build the Docker image after the Gradle build process
+          docker build -t $ECR_REGISTRY/chatter:${IMAGE_TAG} .
+          docker push $ECR_REGISTRY/chatter:${IMAGE_TAG}
 
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+      - name: Update ECS task definition with new image
+        id: update-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
 
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+      - name: Deploy new ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          task-definition: ${{ steps.update-task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
