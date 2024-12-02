@@ -1,12 +1,14 @@
-FROM maven:3.8.4-openjdk-11 as build
-WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Use the official OpenJDK 21 image as a base image
+FROM openjdk:21-jdk-slim
 
-COPY src ./src
-RUN mvn package -DskipTests
-
-FROM openjdk:11-jre-slim
+# Set the working directory inside the container
 WORKDIR /app
-COPY --from=build /app/target/chatter.jar /app/chatter.jar
-ENTRYPOINT ["java", "-jar", "/app/chatter.jar"]
+
+# Copy your application's compiled JAR file into the container
+COPY target/chatter.jar /app/chatter.jar
+
+# Expose the port that your application will run on
+EXPOSE 8080
+
+# Run the application
+CMD ["java", "-jar", "chatter.jar"]
