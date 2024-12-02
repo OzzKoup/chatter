@@ -34,7 +34,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '21'  # Specify the Java version you're using
-          distribution: 'adoptopenjdk'  # Use the OpenJDK distribution
+          distribution: 'adoptium'  # Use the Adoptium distribution
 
       - name: Clean and build Java project
         run: |
