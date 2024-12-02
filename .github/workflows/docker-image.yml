@@ -30,6 +30,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Set up Java with Maven
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'  # Specify the Java version you're using
+          distribution: 'adoptopenjdk'  # Use the OpenJDK distribution
+
+      - name: Clean and build Java project
+        run: |
+          mvn clean package  # Clean and build your Maven project, this will create the target directory with the .jar file
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -40,7 +50,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Log in to ECR and push the image
+          # Build the Docker image after the Maven build process
           docker build -t $ECR_REGISTRY/chatter:${IMAGE_TAG} .
           docker push $ECR_REGISTRY/chatter:${IMAGE_TAG}
 
