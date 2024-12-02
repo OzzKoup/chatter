@@ -5,7 +5,7 @@ FROM openjdk:21-jdk-slim
 WORKDIR /app
 
 # Copy your application's compiled JAR file into the container
-COPY target/chatter.jar /app/chatter.jar
+COPY build/libs/chatter-0.0.1-SNAPSHOT.jar /app/chatter.jar
 
 # Expose the port that your application will run on
 EXPOSE 8080
