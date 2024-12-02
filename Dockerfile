@@ -1,14 +1,23 @@
-# Use the official OpenJDK 21 runtime as the base image
-FROM eclipse-temurin:21-jdk-jammy
+# Используем официальный образ OpenJDK как базовый
+FROM openjdk:21-jdk-slim AS build
 
-# Set the working directory inside the container
+# Устанавливаем рабочую директорию в контейнере
 WORKDIR /app
 
-# Copy the JAR file from the target directory to the container
-COPY target/chatter.jar chatter.jar
+# Копируем файлы проекта (pom.xml и исходники)
+COPY pom.xml .
+COPY src ./src
 
-# Expose the application's default port (optional, specify if your app runs on a specific port)
+# Сборка проекта (будет создана папка target с JAR-файлом)
+RUN mvn clean install -DskipTests
+
+# Копируем готовый JAR-файл из папки target в новый образ
+FROM openjdk:21-jdk-slim
+WORKDIR /app
+COPY --from=build /app/target/chatter.jar /app/chatter.jar
+
+# Открываем порт для приложения
 EXPOSE 8080
 
-# Command to run the application
-ENTRYPOINT ["java", "-jar", "chatter.jar"]
+# Команда для запуска приложения
+CMD ["java", "-jar", "chatter.jar"]
