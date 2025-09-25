@@ -1,0 +1,36 @@
+
+name: Deploy to Local Minikube
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
+
+
+      - name: Deploy to Kubernetes
+        run: |
+          # Важливо: потрібно оновити тег образу в вашому deployment.yaml
+          # Цей sed-скрипт знаходить рядок 'image:' і замінює тег на новий
+          sed -i 's|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g' k8s/deployment.yaml
+          
+          # Застосовуємо маніфести до кластера
+          kubectl apply -f k8s/deployment.yaml
