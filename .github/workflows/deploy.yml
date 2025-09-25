@@ -41,25 +41,9 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          # Використовуємо правильний шлях до файлу
+          minikube status || minikube start
+          kubectl cluster-info
           DEPLOYMENT_FILE=".github/workflows/k8s/deployment.yaml"
-          
-          # Перевірити чи існує файл
-          if [ ! -f "$DEPLOYMENT_FILE" ]; then
-            echo "Error: $DEPLOYMENT_FILE not found"
-            exit 1
-          fi
-          
-          echo "Current deployment.yaml:"
-          cat "$DEPLOYMENT_FILE"
-          
-          # Оновити тег образу
-          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
-          
-          # Показати оновлений файл
-          echo "Updated deployment.yaml:"
-          cat "$DEPLOYMENT_FILE"
-          
-          # Застосувати маніфести
-          kubectl apply -f "$DEPLOYMENT_FILE"
+          sed -i "s|image: admin/chatter:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
+          kubectl apply -f "$DEPLOYMENT_FILE" --validate=false
           kubectl rollout status deployment/chatter-deployment --timeout=300s
