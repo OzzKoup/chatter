@@ -39,8 +39,34 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
+      - name: Check Kubernetes files
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Looking for Kubernetes files:"
+          find . -name "*.yaml" -o -name "*.yml" | head -10
+
       - name: Deploy to Kubernetes
         run: |
-          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" k8s/deployment.yaml
+          # Перевірити чи існує файл
+          if [ ! -f "k8s/deployment.yaml" ]; then
+            echo "Error: k8s/deployment.yaml not found"
+            echo "Available files:"
+            find . -name "*.yaml" -o -name "*.yml"
+            exit 1
+          fi
+          
+          # Показати поточний вміст файлу
+          echo "Current deployment.yaml:"
+          cat k8s/deployment.yaml
+          
+          # Оновити тег образу
+           sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" .github/workflows/k8s/deployment.yaml
+          
+          # Показати оновлений файл
+          echo "Updated deployment.yaml:"
+          cat k8s/deployment.yaml
+          
+          # Застосувати маніфести
           kubectl apply -f k8s/deployment.yaml
           kubectl rollout status deployment/chatter-deployment --timeout=300s

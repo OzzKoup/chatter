@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatter-deployment
+  labels:
+    app: chatter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatter
+  template:
+    metadata:
+      labels:
+        app: chatter
+    spec:
+      containers:
+        - name: chatter
+          image: admin/chatter:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatter-service
+spec:
+  selector:
+    app: chatter
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
