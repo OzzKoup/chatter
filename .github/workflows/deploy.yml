@@ -42,7 +42,10 @@ jobs:
       - name: Pull and load image to Minikube
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
-          minikube image load ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }} admin/chatter:${{ github.sha }}
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }} admin/chatter:latest
+          minikube image load admin/chatter:${{ github.sha }}
+          minikube image load admin/chatter:latest
 
       - name: Deploy to Kubernetes
         run: |
@@ -53,13 +56,7 @@ jobs:
             exit 1
           fi
           
-          echo "Current deployment.yaml:"
-          cat "$DEPLOYMENT_FILE"
-          
-          sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
-          
-          echo "Updated deployment.yaml:"
-          cat "$DEPLOYMENT_FILE"
+          sed -i "s|image: admin/chatter:.*|image: admin/chatter:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
           
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
