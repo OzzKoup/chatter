@@ -43,57 +43,31 @@ jobs:
         run: |
           pkill -f "ssh.*serveo.net" || true
           pkill -f "kubectl.*port-forward" || true
-          echo "Existing services stopped"
 
       - name: Deploy to Kubernetes
         run: |
           DEPLOYMENT_FILE=".github/workflows/k8s/deployment.yaml"
-          
-          if [ ! -f "$DEPLOYMENT_FILE" ]; then
-            echo "Error: $DEPLOYMENT_FILE not found"
-            exit 1
-          fi
-          
           sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
-          
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
 
-      - name: Wait for pod to be ready
-        run: |
-          kubectl wait --for=condition=ready pod -l app=chatter --timeout=120s
-
       - name: Start services
         run: |
-          echo "Starting port forwarding..."
-          kubectl port-forward service/chatter-service 8081:80 --address 0.0.0.0 > /tmp/port-forward.log 2>&1 &
+          nohup kubectl port-forward service/chatter-service 8083:80 --address 0.0.0.0 > /tmp/port-forward.log 2>&1 &
           sleep 20
           
-          echo "Testing local connection..."
-          for i in {1..10}; do
-            if curl -f http://localhost:8081/hello > /dev/null 2>&1; then
-              echo "Local service OK"
-              break
-            else
-              echo "Waiting for service... attempt $i/10"
-              sleep 5
-            fi
-          done
-          
-          if curl -f http://localhost:8081/hello > /dev/null 2>&1; then
-            echo "Starting SSH tunnel..."
-            timeout 30 ssh -i ~/.ssh/serveo_key -R 80:localhost:8081 serveo.net > /tmp/serveo.log 2>&1 &
+          if curl -f http://localhost:8083/hello > /dev/null 2>&1; then
+            timeout 30 ssh -i ~/.ssh/serveo_key -R 80:localhost:8083 serveo.net > /tmp/serveo.log 2>&1 &
             sleep 15
           
-            echo "Getting tunnel URL..."
             TUNNEL_URL=$(grep -o 'https://[^[:space:]]*serveo\.net' /tmp/serveo.log | head -1)
             if [ ! -z "$TUNNEL_URL" ]; then
-              echo "✅ Deployment complete! Access: ${TUNNEL_URL}/hello"
+              echo "Deployment complete! Access: ${TUNNEL_URL}/hello"
             else
-              echo "✅ Deployment complete! Check /tmp/serveo.log for URL"
+              echo "Deployment complete! Check logs for URL:"
               cat /tmp/serveo.log
             fi
           else
-            echo "❌ Local service failed"
+            echo "Local service failed"
             exit 1
           fi
