@@ -9,8 +9,8 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app: chatter
@@ -19,6 +19,7 @@ spec:
       labels:
         app: chatter
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: chatter
           image: admin/chatter:latest
@@ -29,21 +30,21 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-          # Health checks
+          # Простіші health checks
           livenessProbe:
             httpGet:
-              path: /actuator/health
+              path: /hello
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 30
-            timeoutSeconds: 5
+            timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /actuator/health
+              path: /hello
               port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 5
             timeoutSeconds: 5
             failureThreshold: 3
           # Resource limits
