@@ -40,7 +40,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
       - name: Stop existing services
-        run: tunnel stop
+        run: /usr/local/bin/tunnel stop
 
       - name: Deploy to Kubernetes
         run: |
@@ -57,4 +57,4 @@ jobs:
           kubectl rollout status deployment/chatter-deployment --timeout=300s
 
       - name: Start services
-        run: tunnel start
+        run: /usr/local/bin/tunnel start
