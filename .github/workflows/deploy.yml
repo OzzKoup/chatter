@@ -82,14 +82,18 @@ jobs:
           
           if curl -f http://localhost:8081/hello > /dev/null 2>&1; then
             echo "Starting SSH tunnel..."
-            ssh -i ~/.ssh/serveo_key -R chatter-msg:80:localhost:8081 serveo.net > /tmp/serveo.log 2>&1 &
-            sleep 10
-            echo "✅ Deployment complete! Access: https://chatter-msg.serveo.net/hello"
+            timeout 30 ssh -i ~/.ssh/serveo_key -R 80:localhost:8081 serveo.net > /tmp/serveo.log 2>&1 &
+            sleep 15
+          
+            echo "Getting tunnel URL..."
+            TUNNEL_URL=$(grep -o 'https://[^[:space:]]*serveo\.net' /tmp/serveo.log | head -1)
+            if [ ! -z "$TUNNEL_URL" ]; then
+              echo "✅ Deployment complete! Access: ${TUNNEL_URL}/hello"
+            else
+              echo "✅ Deployment complete! Check /tmp/serveo.log for URL"
+              cat /tmp/serveo.log
+            fi
           else
             echo "❌ Local service failed"
-            echo "Port-forward log:"
-            cat /tmp/port-forward.log
-            echo "Pod logs:"
-            kubectl logs -l app=chatter --tail=20
             exit 1
           fi
