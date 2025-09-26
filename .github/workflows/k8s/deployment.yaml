@@ -19,7 +19,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: chatter
-          image: admin/chatter:latest
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -31,25 +31,25 @@ spec:
             httpGet:
               path: /hello
               port: 8080
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            timeoutSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /hello
               port: 8080
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 2
+            timeoutSeconds: 10
+            failureThreshold: 5
           resources:
             requests:
               memory: "128Mi"
               cpu: "100m"
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: "512Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -64,5 +64,6 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
+      nodePort: 30080
       name: http
   type: NodePort

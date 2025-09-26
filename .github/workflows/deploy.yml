@@ -39,14 +39,6 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
-      - name: Pull and load image to Minikube
-        run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }} admin/chatter:${{ github.sha }}
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }} admin/chatter:latest
-          minikube image load admin/chatter:${{ github.sha }}
-          minikube image load admin/chatter:latest
-
       - name: Deploy to Kubernetes
         run: |
           DEPLOYMENT_FILE=".github/workflows/k8s/deployment.yaml"
@@ -55,8 +47,6 @@ jobs:
             echo "Error: $DEPLOYMENT_FILE not found"
             exit 1
           fi
-          
-          sed -i "s|image: admin/chatter:.*|image: admin/chatter:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
           
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
