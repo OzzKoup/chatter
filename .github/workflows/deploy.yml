@@ -44,7 +44,7 @@ jobs:
       - name: Deploy to Kubernetes
         run: |
           # Apply the deployment from your k8s folder
-          kubectl apply -f github/workflows/k8s/deployment.yaml
+          kubectl apply -f .github/workflows/k8s/deployment.yaml
           
           # Change to Recreate strategy to avoid hanging pods
           kubectl patch deployment chatter-deployment -p '{"spec":{"strategy":{"type":"Recreate"}}}'
