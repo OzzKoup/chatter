@@ -43,11 +43,19 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
+          # Clean up any stuck pods first
+          kubectl delete pod -l app=chatter --force --grace-period=0 || true
+          sleep 5
+          
           # Update deployment with new image
           kubectl set image deployment/chatter-deployment chatter=admin/chatter:${{ github.sha }}
           
           # Wait for rollout to complete
-          kubectl rollout status deployment/chatter-deployment --timeout=300s
+          timeout 300 kubectl rollout status deployment/chatter-deployment || {
+            echo "Rollout timed out, force cleaning stuck pods..."
+            kubectl delete pod -l app=chatter --force --grace-period=0
+            kubectl rollout status deployment/chatter-deployment --timeout=120s
+          }
           
           # Verify deployment
           kubectl get pods -l app=chatter
