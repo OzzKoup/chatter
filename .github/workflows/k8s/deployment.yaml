@@ -19,7 +19,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: chatter
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+          image: placeholder:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

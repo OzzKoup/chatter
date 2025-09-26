@@ -48,5 +48,7 @@ jobs:
             exit 1
           fi
           
+          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}|g" "$DEPLOYMENT_FILE"
+          
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
