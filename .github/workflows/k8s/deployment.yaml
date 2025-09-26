@@ -7,7 +7,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate  # Простіша стратегія
+    type: Recreate
   selector:
     matchLabels:
       app: chatter
@@ -16,18 +16,17 @@ spec:
       labels:
         app: chatter
     spec:
-      terminationGracePeriodSeconds: 10  # Швидше завершення
+      terminationGracePeriodSeconds: 10
       containers:
         - name: chatter
           image: admin/chatter:latest
-          imagePullPolicy: Never
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-          # Прості health checks без actuator
           livenessProbe:
             httpGet:
               path: /hello
@@ -44,7 +43,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 2
-          # Менші resource limits
           resources:
             requests:
               memory: "128Mi"
@@ -52,7 +50,6 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "200m"
-
 ---
 apiVersion: v1
 kind: Service
