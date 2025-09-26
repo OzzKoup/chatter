@@ -43,27 +43,34 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          # Clean up any stuck pods first
-          kubectl delete pod -l app=chatter --force --grace-period=0 || true
-          sleep 5
+          # Apply the deployment from your k8s folder
+          kubectl apply -f github/workflows/k8s/deployment.yaml
           
-          # Update deployment with new image
+          # Change to Recreate strategy to avoid hanging pods
+          kubectl patch deployment chatter-deployment -p '{"spec":{"strategy":{"type":"Recreate"}}}'
+          
+          # Scale to 0 first
+          kubectl scale deployment chatter-deployment --replicas=0
+          
+          # Wait for all pods to terminate (minimal timeout)
+          kubectl wait --for=delete pod -l app=chatter --timeout=30s || kubectl delete pod -l app=chatter --force --grace-period=0
+          
+          # Update image
           kubectl set image deployment/chatter-deployment chatter=admin/chatter:${{ github.sha }}
           
-          # Wait for rollout to complete
-          timeout 300 kubectl rollout status deployment/chatter-deployment || {
-            echo "Rollout timed out, force cleaning stuck pods..."
-            kubectl delete pod -l app=chatter --force --grace-period=0
-            kubectl rollout status deployment/chatter-deployment --timeout=120s
-          }
+          # Scale back to 1
+          kubectl scale deployment chatter-deployment --replicas=1
+          
+          # Wait for new pod to be ready (minimal timeout)
+          kubectl wait --for=condition=ready pod -l app=chatter --timeout=60s
           
           # Verify deployment
           kubectl get pods -l app=chatter
 
       - name: Test deployment
         run: |
-          # Wait a bit for service to be ready
-          sleep 15
+          # Мінімальне очікування
+          sleep 10
           
           # Test the endpoint
           curl -f http://localhost:8080/hello || exit 1

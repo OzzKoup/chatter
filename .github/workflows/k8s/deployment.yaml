@@ -7,10 +7,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 0
+    type: Recreate  # Простіша стратегія
   selector:
     matchLabels:
       app: chatter
@@ -19,7 +16,7 @@ spec:
       labels:
         app: chatter
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 10  # Швидше завершення
       containers:
         - name: chatter
           image: admin/chatter:latest
@@ -30,31 +27,31 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
-          # Простіші health checks
+          # Прості health checks без actuator
           livenessProbe:
             httpGet:
               path: /hello
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 30
-            timeoutSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /hello
               port: 8080
             initialDelaySeconds: 10
-            periodSeconds: 5
+            periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 3
-          # Resource limits
+            failureThreshold: 2
+          # Менші resource limits
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
+              memory: "128Mi"
+              cpu: "100m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "256Mi"
+              cpu: "200m"
 
 ---
 apiVersion: v1
