@@ -59,20 +59,37 @@ jobs:
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
 
+      - name: Wait for pod to be ready
+        run: |
+          kubectl wait --for=condition=ready pod -l app=chatter --timeout=120s
+
       - name: Start services
         run: |
-          echo "Starting port forwarding on port 8081..."
-          nohup kubectl port-forward service/chatter-service 8081:80 --address 0.0.0.0 > /tmp/port-forward.log 2>&1 &
-          sleep 10
+          echo "Starting port forwarding..."
+          kubectl port-forward service/chatter-service 8081:80 --address 0.0.0.0 > /tmp/port-forward.log 2>&1 &
+          sleep 20
           
           echo "Testing local connection..."
+          for i in {1..10}; do
+            if curl -f http://localhost:8081/hello > /dev/null 2>&1; then
+              echo "Local service OK"
+              break
+            else
+              echo "Waiting for service... attempt $i/10"
+              sleep 5
+            fi
+          done
+          
           if curl -f http://localhost:8081/hello > /dev/null 2>&1; then
-            echo "Local service responding, starting tunnel..."
-            nohup ssh -i ~/.ssh/serveo_key -R chatter-msg:80:localhost:8081 serveo.net > /tmp/serveo.log 2>&1 &
-            sleep 5
-            echo "Services started! Access: https://chatter-msg.serveo.net/hello"
+            echo "Starting SSH tunnel..."
+            ssh -i ~/.ssh/serveo_key -R chatter-msg:80:localhost:8081 serveo.net > /tmp/serveo.log 2>&1 &
+            sleep 10
+            echo "✅ Deployment complete! Access: https://chatter-msg.serveo.net/hello"
           else
-            echo "Local service not responding"
+            echo "❌ Local service failed"
+            echo "Port-forward log:"
             cat /tmp/port-forward.log
+            echo "Pod logs:"
+            kubectl logs -l app=chatter --tail=20
             exit 1
           fi
