@@ -57,26 +57,20 @@ jobs:
           sleep 20
           
           if curl -f http://localhost:8083/hello > /dev/null 2>&1; then
-            timeout 30 ssh -i ~/.ssh/serveo_key -R 80:localhost:8083 serveo.net > /tmp/serveo.log 2>&1 &
+            ssh -i ~/.ssh/serveo_key -R 80:localhost:8083 serveo.net > /tmp/serveo.log 2>&1 &
             sleep 15
           
             TUNNEL_URL=$(grep -o 'https://[^[:space:]]*serveo\.net' /tmp/serveo.log | head -1)
             if [ ! -z "$TUNNEL_URL" ]; then
               echo "Deployment complete! New URL: ${TUNNEL_URL}/hello"
           
-              # Додати URL в коментар до коміту
-              git config --global user.email "actions@github.com"
-              git config --global user.name "GitHub Actions"
-          
-              # Створити коментар з URL
               curl -X POST \
                 -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                 -H "Accept: application/vnd.github.v3+json" \
                 https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/comments \
-                -d "{\"body\":\"Deployment complete! New URL: ${TUNNEL_URL}/hello\"}"
+                -d "{\"body\":\"Deployment complete! Access at: ${TUNNEL_URL}/hello\"}"
             else
-              echo "Deployment complete! Check logs for URL:"
-              cat /tmp/serveo.log
+              echo "Deployment complete! Check logs for URL"
             fi
           else
             echo "Local service failed"
