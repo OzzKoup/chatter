@@ -39,6 +39,9 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
+      - name: Stop existing services
+        run: tunnel stop
+
       - name: Deploy to Kubernetes
         run: |
           DEPLOYMENT_FILE=".github/workflows/k8s/deployment.yaml"
@@ -52,3 +55,6 @@ jobs:
           
           kubectl apply -f "$DEPLOYMENT_FILE"
           kubectl rollout status deployment/chatter-deployment --timeout=300s
+
+      - name: Start services
+        run: tunnel start
